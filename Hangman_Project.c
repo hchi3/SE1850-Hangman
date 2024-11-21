@@ -21,6 +21,8 @@ void updateDisplay(char* display, char* word, char guess, int wordSize);
 
 int checkWordComplete(char* display, char* word, int wordSize);
 
+void getGameInfo(int* numPlayers, int* wordSize, char wordInput[]);
+
 int main() {
     bool GAMEOVER = false;
     bool wordComplete = false;
@@ -34,7 +36,9 @@ int main() {
     char currentGuess;
     
     // test word
-    strcpy(wordInput, "KEYBOARD");
+    //strcpy(wordInput, "KEYBOARD");
+
+    getGameInfo(&numPlayers, &wordSize, wordInput);
 
     // assigns secret word to input word
     word = (char*)malloc(wordSize * sizeof(char));
@@ -165,4 +169,42 @@ int checkWordComplete(char* display, char* word, int wordSize){
         }
     }
     return 1;
+}
+
+void getGameInfo(int* numPlayers, int* wordSize, char wordInput[]){
+    int difficulty = 0;
+    printf("Welcome to Hangeman!\n");
+    printf("Enter number of players: ");
+    scanf("%d", numPlayers);
+    printf("Select word difficulty\n1. Easy\n2. Medium\n3. Hard\n4. Custom\n");
+    scanf("%d", &difficulty);
+    if (difficulty == 1){
+        strcpy(wordInput, "DUCK"); //temporary easy word
+        printf("You selected Easy\n");
+    }
+    else if (difficulty == 2){
+        strcpy(wordInput, "DIFFICULT"); //temporary medium word
+        printf("You selected Medium\n");
+    }
+    else if (difficulty == 3){
+        strcpy(wordInput,"TECHNOLOGICAL"); //temporary hard word
+        printf("You selected Hard\n");
+    }
+    else if (difficulty == 4){
+        printf("You selected Custom\n");
+        printf("Enter costume word or type X to generate from custom list: ");
+        scanf("%s", wordInput);
+        if (strcmp(wordInput, "X") == 0){
+            strcpy(wordInput, "CUSTOM"); // temporary random custom word
+        }
+        else{
+            // converts user given word to uppercase
+            for (int i = 0; i < strlen(wordInput); i++){
+                wordInput[i] = toupper(wordInput[i]);
+            }
+        }
+        
+    }
+    *wordSize = strlen(wordInput)+1;
+
 }
