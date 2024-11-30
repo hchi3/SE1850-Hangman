@@ -168,3 +168,4 @@ int checkWordComplete(char* display, char* word, int wordSize){
 }
 
 //Test
+//test 4
