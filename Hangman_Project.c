@@ -28,9 +28,9 @@ int main() {
     bool wordComplete = false;
     int numPlayers = 4; // temporarily assigned value
     int guessesRemaining = 6; // temporary value
-    int wordSize = 20; // temoporary value (maybe)
-    char wordInput[wordSize];
-    char wordGuess[wordSize];
+    int wordSize; // temoporary value (maybe)
+    char wordInput[100];
+    char wordGuess[100];
     char *word = NULL; 
     char *wordDisplay = NULL;
     char availableGuesses[ALPHABET_SIZE];
@@ -73,12 +73,10 @@ int main() {
             
             // player attemps to guess word
             if (currentGuess == '?'){
-                printf("Enter word: ");
-                scanf("%s", wordGuess); /// MAKE ERROR MESSAGE IF GUESS IS TOO LONG
-                // if(strlen(wordGuess) != wordSize){
-                //     printf("\nIncorrect word length\n");
-                //     continue;
-                // }
+                printf("Enter guess word: ");
+            
+                scanf("%s", wordGuess);
+           
                 if (checkWordComplete(wordGuess, word, wordSize) == 1){
                     wordComplete = true;
                     break;
@@ -87,6 +85,7 @@ int main() {
                     printf("\nIncorrect\n");
                 }
             }
+            
             // player guesses and individual letter
             else{
                 // check is letter has already been guessed
@@ -184,7 +183,7 @@ void updateDisplay(char* display, char* word, char guess, int wordSize){
 int checkWordComplete(char* display, char* word, int wordSize){
     //printf("Comparing %s with %s\n\n", display, word);
     for (int i = 0; i < wordSize; i++){
-        if(word[i] != display[i]){
+        if(word[i] != toupper(display[i])){
             return 0;
         }
     }
