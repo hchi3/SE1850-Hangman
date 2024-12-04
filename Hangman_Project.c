@@ -28,8 +28,9 @@ int main() {
     bool wordComplete = false;
     int numPlayers = 4; // temporarily assigned value
     int guessesRemaining = 6; // temporary value
-    int wordSize = 9; // temoporary value (maybe)
+    int wordSize = 20; // temoporary value (maybe)
     char wordInput[wordSize];
+    char wordGuess[wordSize];
     char *word = NULL; 
     char *wordDisplay = NULL;
     char availableGuesses[ALPHABET_SIZE];
@@ -61,35 +62,54 @@ int main() {
     while (!GAMEOVER){
         for (int i = 0; i < numPlayers; i++){
             printDisplay(wordDisplay, availableGuesses, wordSize);
-            printf("\nPlayer %d enter your guess: ", i+1);
+            printf("\nPlayer %d enter your guess or enter '?' to guess full word: ", i+1);
             scanf(" %c", &currentGuess);
             
-            // check if guess is a letter
-            if (isalpha(currentGuess) == 0){
+            // check if guess is a valid characater
+            if (currentGuess != '?' && isalpha(currentGuess) == 0){
                 printf("Invalid Guess\n");
                 continue;
             }
-            // check is letter has already been guessed
-            if (checkAvailableGuess(currentGuess, availableGuesses)==0){// UDPATE THIS
-                printf("Already Guessed\n");
-                continue;
+            
+            // player attemps to guess word
+            if (currentGuess == '?'){
+                printf("Enter word: ");
+                scanf("%s", wordGuess); /// MAKE ERROR MESSAGE IF GUESS IS TOO LONG
+                // if(strlen(wordGuess) != wordSize){
+                //     printf("\nIncorrect word length\n");
+                //     continue;
+                // }
+                if (checkWordComplete(wordGuess, word, wordSize) == 1){
+                    wordComplete = true;
+                    break;
+                }
+                else{
+                    printf("\nIncorrect\n");
+                }
             }
-
-            // compares guess to word if letter is valid
-            if (checkGuessInWord(currentGuess, word, wordSize)==1){
-                printf("Correct!\n");
-                updateDisplay(wordDisplay, word, currentGuess, wordSize);
-            }
+            // player guesses and individual letter
             else{
-                printf("Not in word\n");
-            }
+                // check is letter has already been guessed
+                if (checkAvailableGuess(currentGuess, availableGuesses)==0){// UDPATE THIS
+                    printf("Already Guessed\n");
+                    continue;
+                }
 
-            // checks if word is complete
-            if (checkWordComplete(wordDisplay, word, wordSize) == 1){
-                wordComplete = true;
-                break;
-            }
+                // compares guess to word if letter is valid
+                if (checkGuessInWord(currentGuess, word, wordSize)==1){
+                    printf("Correct!\n");
+                    updateDisplay(wordDisplay, word, currentGuess, wordSize);
+                }
+                else{
+                    printf("\nNot in word!\n");
+                }
 
+                // checks if word is complete
+                if (checkWordComplete(wordDisplay, word, wordSize) == 1){
+                    wordComplete = true;
+                    break;
+                }
+            }
             //add delay
         }
 
@@ -194,7 +214,7 @@ void getGameInfo(int* numPlayers, int* wordSize, char wordInput[]){
         printf("You selected Custom\n");
         printf("Enter costume word or type X to generate from custom list: ");
         scanf("%s", wordInput);
-        if (strcmp(wordInput, "X") == 0){
+        if (strcmp(wordInput, "X") == 0 || strcmp(wordInput, "x") == 0){
             strcpy(wordInput, "CUSTOM"); // temporary random custom word
         }
         else{
