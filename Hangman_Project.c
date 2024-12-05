@@ -11,7 +11,7 @@
 #define LEN 1024       
 #define INIT 10        
 #define GROW 2         
-#define MAX_TRIES 7    
+#define MAX_TRIES 6    
 #define MAX_NAME_LENGTH 3
 #define LEADERBOARD_FILE "leaderboard.txt"
 
