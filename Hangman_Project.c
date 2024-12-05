@@ -8,10 +8,10 @@
 #include <limits.h>
 
 #define MAX_WORD_LENGTH 50
-#define LEN 1024       // Buffer size for reading dictionary
-#define INIT 10        // Initial dictionary size
-#define GROW 2         // Growth factor for reallocating dictionary
-#define MAX_TRIES 8    // Maximum wrong guesses
+#define LEN 1024       
+#define INIT 10        
+#define GROW 2         
+#define MAX_TRIES 8    
 #define MAX_NAME_LENGTH 3
 #define LEADERBOARD_FILE "leaderboard.txt"
 
