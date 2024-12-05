@@ -1,171 +1,299 @@
 #include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
+#include <time.h>
+#include <assert.h>
+#include <stdbool.h>
+#include <limits.h>
 
-// letters will always be represented in uppercase in guesses and words for consistency //
+#define MAX_WORD_LENGTH 50
+#define LEN 1024       // Buffer size for reading dictionary
+#define INIT 10        // Initial dictionary size
+#define GROW 2         // Growth factor for reallocating dictionary
+#define MAX_TRIES 8    // Maximum wrong guesses
+#define MAX_NAME_LENGTH 3
+#define LEADERBOARD_FILE "leaderboard.txt"
 
-const int ALPHABET_SIZE = 26;
+// Structure to hold leaderboard entries
+typedef struct {
+    char name[MAX_NAME_LENGTH + 1];
+    int score;
+    char difficulty[10];
+} LeaderboardEntry;
 
-/*-----------------------------------------------------------------------------
--								Prototypes
------------------------------------------------------------------------------*/
-void printDisplay(char* display, char availableGuesses[], int wordSize);
+// Structure to hold the dictionary
+typedef struct {
+    int nval;     // Current number of words
+    int max;      // Maximum capacity
+    char **words; // Array of words
+} Diction;
 
-int checkAvailableGuess(char guess, char availableGuesses[]);
-
-int checkGuessInWord(char guess, char* word, int wordSize);
-
-void updateDisplay(char* display, char* word, char guess, int wordSize);
-
-int checkWordComplete(char* display, char* word, int wordSize);
+// Function Prototypes
+Diction* file_open();
+void free_mem(Diction* dictionary);
+char* get_word_by_difficulty(Diction* dictionary, int difficulty);
+void displayWord(const char secretWord[], const char guessedWord[]);
+void drawHangman(int incorrectGuesses);
+void printFalseGuesses(char falseGuesses[], int falseCount);
+void save_to_leaderboard(const char* name, int score, const char* difficulty);
+void display_leaderboard();
 
 int main() {
-    bool GAMEOVER = false;
-    bool wordComplete = false;
-    int numPlayers = 4; // temporarily assigned value
-    int guessesRemaining = 6; // temporary value
-    int wordSize = 9; // temoporary value (maybe)
-    char wordInput[wordSize];
-    char *word = NULL; 
-    char *wordDisplay = NULL;
-    char availableGuesses[ALPHABET_SIZE];
-    char currentGuess;
-    
-    // test word
-    strcpy(wordInput, "KEYBOARD");
+    srand(time(NULL));
 
-    // assigns secret word to input word
-    word = (char*)malloc(wordSize * sizeof(char));
-    for (int i = 0; i < wordSize; i++) {
-        word[i] = wordInput[i];
+    // Load the dictionary
+    Diction* dictionary = file_open();
+
+    printf("Welcome to Hangman!\n");
+
+    // Choose game mode
+    int gameMode;
+    printf("Select Game Mode:\n1. Singleplayer\n2. Multiplayer (2-4 players)\n");
+    do {
+        scanf("%d", &gameMode);
+    } while (gameMode < 1 || gameMode > 2);
+
+    // Number of players for multiplayer
+    int numPlayers = 1;
+    if (gameMode == 2) {
+        printf("Enter the number of players (2-4): ");
+        do {
+            scanf("%d", &numPlayers);
+        } while (numPlayers < 2 || numPlayers > 4);
     }
 
-    wordDisplay = (char*)malloc(wordSize * sizeof(char));
-    //sets displayed word to blank
-    for (int i = 0; i < wordSize-1; i++) {
-        wordDisplay[i] = '_';
+    // Get difficulty from the players
+    int difficulty;
+    printf("Select difficulty:\n1. Easy (4 letters or fewer)\n2. Medium (5-6 letters)\n3. Hard (7+ letters)\n");
+    do {
+        scanf("%d", &difficulty);
+    } while (difficulty < 1 || difficulty > 3);
+
+    char difficultyLabel[10];
+    strcpy(difficultyLabel, difficulty == 1 ? "Easy" : difficulty == 2 ? "Medium" : "Hard");
+
+    // Select a word based on difficulty
+    char* secretWord = get_word_by_difficulty(dictionary, difficulty);
+    int wordLength = strlen(secretWord);
+
+    char guessedWord[MAX_WORD_LENGTH] = {0};
+    for (int i = 0; i < wordLength; i++) {
+        guessedWord[i] = '_';
     }
 
-    //sets available guesses to alphabet
-    for (int i = 0; i < ALPHABET_SIZE; i++) {
-        availableGuesses[i] = i + 'A';
-    }
-    
+    char falseGuesses[MAX_TRIES] = {0};
+    bool guessedLetters[26] = {false};
+    int incorrectGuesses = 0, falseCount = 0;
 
-    while (!GAMEOVER){
-        for (int i = 0; i < numPlayers; i++){
-            printDisplay(wordDisplay, availableGuesses, wordSize);
-            printf("\nPlayer %d enter your guess: ", i+1);
-            scanf(" %c", &currentGuess);
-            
-            // check if guess is a letter
-            if (isalpha(currentGuess) == 0){
-                printf("Invalid Guess\n");
-                continue;
-            }
-            // check is letter has already been guessed
-            if (checkAvailableGuess(currentGuess, availableGuesses)==0){// UDPATE THIS
-                printf("Already Guessed\n");
-                continue;
-            }
+    int currentPlayer = 1;
+    int totalGuesses = 0;
 
-            // compares guess to word if letter is valid
-            if (checkGuessInWord(currentGuess, word, wordSize)==1){
-                printf("Correct!\n");
-                updateDisplay(wordDisplay, word, currentGuess, wordSize);
-            }
-            else{
-                printf("Not in word\n");
-            }
+    while (incorrectGuesses < MAX_TRIES) {
+        printf("\n");
+        if (gameMode == 2) {
+            printf("Player %d's turn\n", currentPlayer);
+        }
+        displayWord(secretWord, guessedWord);
+        drawHangman(incorrectGuesses);
+        printFalseGuesses(falseGuesses, falseCount);
 
-            // checks if word is complete
-            if (checkWordComplete(wordDisplay, word, wordSize) == 1){
-                wordComplete = true;
-                break;
-            }
+        char guess;
+        printf("Enter a letter: ");
+        scanf(" %c", &guess);
+        guess = tolower(guess);
+        totalGuesses++;
 
-            //add delay
+        if (!isalpha(guess)) {
+            printf("Invalid input. Please enter a letter.\n");
+            continue;
         }
 
-        // exits game loop if word is complete
-        if (wordComplete){
-            GAMEOVER = true;
+        if (guessedLetters[guess - 'a']) {
+            printf("You've already guessed that letter. Try again.\n");
+            continue;
+        }
+
+        guessedLetters[guess - 'a'] = true;
+
+        bool found = false;
+        for (int i = 0; i < wordLength; i++) {
+            if (secretWord[i] == guess) {
+                found = true;
+                guessedWord[i] = guess;
+            }
+        }
+
+        if (found) {
+            printf("Good guess!\n");
+        } else {
+            printf("Sorry, '%c' is not in the word.\n", guess);
+            falseGuesses[falseCount++] = guess;
+            incorrectGuesses++;
+        }
+
+        if (strcmp(secretWord, guessedWord) == 0) {
+            printf("\nCongratulations! ");
+            if (gameMode == 1) {
+                printf("You've guessed the word: %s\n", secretWord);
+            } else {
+                printf("Player %d guessed the word: %s\n", currentPlayer, secretWord);
+            }
+
+            // Save to leaderboard
+            char playerName[MAX_NAME_LENGTH + 1];
+            printf("Enter your name (3 characters max): ");
+            scanf("%s", playerName);
+            playerName[MAX_NAME_LENGTH] = '\0'; // Ensure name is 3 characters max
+            save_to_leaderboard(playerName, totalGuesses, difficultyLabel);
+
+            break;
+        }
+
+        if (gameMode == 2) {
+            currentPlayer = (currentPlayer % numPlayers) + 1; // Move to the next player
         }
     }
 
-    // prints win message if word is completed
-    if (wordComplete) {
-        printf("\n\t************\n\t* You WIN! *\n\t************\n\n");
+    if (incorrectGuesses >= MAX_TRIES) {
+        printf("\nGame Over! The word was: %s\n", secretWord);
     }
 
+    // Display leaderboard
+    printf("\nLeaderboard:\n");
+    display_leaderboard();
+
+    // Free dictionary memory
+    free_mem(dictionary);
+    return 0;
 }
 
-
-/*-----------------------------------------------------------------------------
--								Functions
------------------------------------------------------------------------------*/
-
-// prints discovered letters in word and available letters
-void printDisplay(char* display, char availableGuesses[], int wordSize){
-    printf("\n\n");
-    if (display != NULL){
-        for (int i = 0; i < wordSize-1; i++){ // prints displayed word
-            printf("%c ", display[i]);
-        }
+// Function to save to leaderboard
+void save_to_leaderboard(const char* name, int score, const char* difficulty) {
+    FILE* fp = fopen(LEADERBOARD_FILE, "a");
+    if (!fp) {
+        perror("Error opening leaderboard file");
+        return;
     }
-    printf("\n\nAvailable Letters:\n"); // prints available letters
-    for (int i = 0; i < ALPHABET_SIZE; i++){
-        if (availableGuesses[i] != '-'){ // prints i if letter isn't removed/letter = '-'
-            printf("%c ", availableGuesses[i]);
+    fprintf(fp, "%s %d %s\n", name, score, difficulty);
+    fclose(fp);
+}
+
+// Function to display leaderboard
+void display_leaderboard() {
+    FILE* fp = fopen(LEADERBOARD_FILE, "r");
+    if (!fp) {
+        printf("No leaderboard data found.\n");
+        return;
+    }
+
+    char name[MAX_NAME_LENGTH + 1];
+    int score;
+    char difficulty[10];
+    printf("%-10s %-10s %-10s\n", "Name", "Guesses", "Difficulty");
+    printf("--------------------------------\n");
+
+    while (fscanf(fp, "%s %d %s", name, &score, difficulty) == 3) {
+        printf("%-10s %-10d %-10s\n", name, score, difficulty);
+    }
+    fclose(fp);
+}
+
+// Function to display the current state of the word
+void displayWord(const char secretWord[], const char guessedWord[]) {
+    printf("\nWord: ");
+    for (int i = 0; i < strlen(secretWord); i++) {
+        printf("%c ", guessedWord[i]);
+    }
+    printf("\n");
+}
+
+// Hangman visuals for incorrect guesses
+void drawHangman(int incorrectGuesses) {
+    const char* hangmanStages[] = {
+        "  _______\n |/      |\n |\n |\n |\n |\n_|___",         
+        "  _______\n |/      |\n |      (_)\n |\n |\n |\n_|___",      
+        "  _______\n |/      |\n |      (_)\n |       |\n |\n |\n_|___",  
+        "  _______\n |/      |\n |      (_)\n |      \\|\n |\n |\n_|___",  
+        "  _______\n |/      |\n |      (_)\n |      \\|/\n |\n |\n_|___", 
+        "  _______\n |/      |\n |      (_)\n |      \\|/\n |       |\n |\n_|___",  
+        "  _______\n |/      |\n |      (_)\n |      \\|/\n |       |\n |      /\n_|___", 
+        "  _______\n |/      |\n |      (_)\n |      \\|/\n |       |\n |      / \\\n_|___"  
+    };
+    printf("%s\n", hangmanStages[incorrectGuesses]);
+}
+
+// Function to print false guesses
+void printFalseGuesses(char falseGuesses[], int falseCount) {
+    printf("False Letters: ");
+    if (falseCount == 0) {
+        printf("None");
+    } else {
+        for (int i = 0; i < falseCount; i++) {
+            printf("%c ", falseGuesses[i]);
         }
     }
     printf("\n");
 }
 
-
-// compares current guess to available guesses and removes value from available guesses + returns one if guess is valid
-int checkAvailableGuess(char guess, char availableGuesses[]){
-    for (int i = 0; i < ALPHABET_SIZE; i++){
-        if (toupper(guess) == availableGuesses[i]){
-            availableGuesses[i] = '-';
-            return 1;
-        }
+// Function to open and load the dictionary from a file
+Diction* file_open() {
+    FILE* fp = fopen("dictionary.txt", "r");
+    if (!fp) {
+        perror("Failed to open dictionary file");
+        exit(EXIT_FAILURE);
     }
-    // if letter is not found return 0
-    return 0;
+
+    Diction* dictionary = malloc(sizeof(Diction));
+    assert(dictionary);
+
+    dictionary->nval = 0;
+    dictionary->max = INIT;
+    dictionary->words = malloc(dictionary->max * sizeof(char*));
+    assert(dictionary->words);
+
+    char buf[LEN];
+    while (fgets(buf, LEN, fp)) {
+        if (dictionary->nval >= dictionary->max) {
+            dictionary->max *= GROW;
+            dictionary->words = realloc(dictionary->words, dictionary->max * sizeof(char*));
+            assert(dictionary->words);
+        }
+
+        buf[strcspn(buf, "\n")] = '\0'; // Remove newline character
+        dictionary->words[dictionary->nval] = strdup(buf);
+        dictionary->nval++;
+    }
+
+    fclose(fp);
+    return dictionary;
 }
 
-// compares current guess to each letter in word and returns 1 if there is a match
-int checkGuessInWord(char guess, char* word, int wordSize){
-    for (int i = 0; i < wordSize; i++){
-        if(word[i] == toupper(guess)){
-            return 1;
-        }
+// Function to free memory allocated for the dictionary
+void free_mem(Diction* dictionary) {
+    for (int i = 0; i < dictionary->nval; i++) {
+        free(dictionary->words[i]);
     }
-    return 0;
+    free(dictionary->words);
+    free(dictionary);
 }
 
-// updates displayed word to include correctly guessed letter
-void updateDisplay(char* display, char* word, char guess, int wordSize){
-    for (int i = 0; i < wordSize; i++){
-        if (toupper(guess) == word[i]){
-            display[i] = toupper(guess);
+// Function to get a word based on difficulty
+char* get_word_by_difficulty(Diction* dictionary, int difficulty) {
+    char* selectedWord = NULL;
+    int maxLength = (difficulty == 1) ? 4 : (difficulty == 2) ? 6 : INT_MAX;
+    int minLength = (difficulty == 1) ? 0 : (difficulty == 2) ? 5 : 7;
+
+    // Loop until a word of the correct length is found
+    while (selectedWord == NULL) {
+        int randomIndex = rand() % dictionary->nval;
+        char* candidate = dictionary->words[randomIndex];
+        int length = strlen(candidate);
+
+        if (length >= minLength && length <= maxLength) {
+            selectedWord = candidate;
         }
     }
-}
 
-// compares display word to actually word and returns 1 if every character matches
-int checkWordComplete(char* display, char* word, int wordSize){
-    //printf("Comparing %s with %s\n\n", display, word);
-    for (int i = 0; i < wordSize; i++){
-        if(word[i] != display[i]){
-            return 0;
-        }
-    }
-    return 1;
+    return selectedWord;
 }
-
-//Test
-//test 4
