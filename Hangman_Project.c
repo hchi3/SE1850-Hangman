@@ -15,14 +15,14 @@
 #define MAX_NAME_LENGTH 3
 #define LEADERBOARD_FILE "leaderboard.txt"
 
-// Structure to hold leaderboard entries
+// Structure for leaderboard
 typedef struct {
     char name[MAX_NAME_LENGTH + 1];
     int score;
     char difficulty[10];
 } LeaderboardEntry;
 
-// Structure to hold the dictionary
+// Structure for dictionary
 typedef struct {
     int nval;     // Current number of words
     int max;      // Maximum capacity
@@ -42,7 +42,7 @@ void display_leaderboard();
 int main() {
     srand(time(NULL));
 
-    // Load the dictionary
+    // Opening dictionary
     Diction* dictionary = file_open();
 
     printf("Welcome to Hangman!\n");
@@ -63,7 +63,7 @@ int main() {
         } while (numPlayers < 2 || numPlayers > 4);
     }
 
-    // Get difficulty from the players
+    // Players choose the difficulty
     int difficulty;
     printf("Select difficulty:\n1. Easy (4 letters or fewer)\n2. Medium (5-6 letters)\n3. Hard (7+ letters)\n");
     do {
@@ -73,7 +73,7 @@ int main() {
     char difficultyLabel[10];
     strcpy(difficultyLabel, difficulty == 1 ? "Easy" : difficulty == 2 ? "Medium" : "Hard");
 
-    // Select a word based on difficulty
+    // Selects a word based on difficulty
     char* secretWord = get_word_by_difficulty(dictionary, difficulty);
     int wordLength = strlen(secretWord);
 
@@ -140,7 +140,7 @@ int main() {
                 printf("Player %d guessed the word: %s\n", currentPlayer, secretWord);
             }
 
-            // Save to leaderboard
+            // Saves to leaderboard
             char playerName[MAX_NAME_LENGTH + 1];
             printf("Enter your name (3 characters max): ");
             scanf("%s", playerName);
@@ -223,7 +223,7 @@ void drawHangman(int incorrectGuesses) {
     printf("%s\n", hangmanStages[incorrectGuesses]);
 }
 
-// Function to print false guesses
+// Function to print wrong guesses
 void printFalseGuesses(char falseGuesses[], int falseCount) {
     printf("False Letters: ");
     if (falseCount == 0) {
@@ -284,7 +284,7 @@ char* get_word_by_difficulty(Diction* dictionary, int difficulty) {
     int maxLength = (difficulty == 1) ? 4 : (difficulty == 2) ? 6 : INT_MAX;
     int minLength = (difficulty == 1) ? 0 : (difficulty == 2) ? 5 : 7;
 
-    // Loop until a word of the correct length is found
+    // Loop for correct word length
     while (selectedWord == NULL) {
         int randomIndex = rand() % dictionary->nval;
         char* candidate = dictionary->words[randomIndex];
