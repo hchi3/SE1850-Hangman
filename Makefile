@@ -1,4 +1,4 @@
-# Makefile for hangman.c and hangman.h
+# Makefile for hangman.c and hangman.h 
 # Author: Hunter Chi
 # Date: 12/1/2024
 CC=gcc
